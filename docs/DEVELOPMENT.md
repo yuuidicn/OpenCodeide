@@ -326,15 +326,27 @@ OpenCode 关键包（`packages/`）：
 ### 7.9 客户端接口对齐（SDK / Server）
 - 提供无头 **Server** + **SDK/Protocol**，第三方可像 OpenCode 一样以 SDK 驱动 Agent；本产品的 Web/桌面/移动/TUI 均为该 Server 的客户端，保证四端行为一致。
 
-### 7.10 模型接口容错与自动重连
-应对「模型接口链接失败」的完整韧性策略：
-- **流式自动重连**：模型响应经 SSE/WebSocket 流式返回；网络中断或服务端断流时自动重连，尽量从断点续接，已生成内容不丢；前台 AI 面板显示「重连中…」。
-- **请求自动重试**：对超时、连接失败、5xx、429（限流）采用**指数退避 + 抖动**自动重试（次数/间隔可配置）；写类/非幂等操作附幂等键，避免重复执行。
-- **多 provider 故障转移**：某 provider/模型不可用时，按后台配置的优先级自动切换到备用模型；切换事件在面板提示。
-- **熔断与排队**：连续失败触发熔断，冷却后半开探测恢复；被限流时本地排队并平滑重发。
-- **超时与心跳**：连接/首字节/整体超时分级控制；长连接心跳检测假死。
-- **明确的失败反馈**：可重试错误自动处理并展示状态与「重试」按钮；不可重试错误（密钥无效、余额不足、模型不存在）直接给出明确提示与修复指引。
-- **可观测**：记录重试次数、切换、失败率与延迟，供后台监控与告警。
+### 7.10 模型接口容错与自动重连（与 OpenCode 一致）
+> 严格对齐 OpenCode 源码的实现（`packages/core/src/util/retry.ts`、`aisdk.ts`、`session/runner/llm.ts`），行为与参数保持一致，并在 Rust 侧等价实现。
+
+**a) 瞬时错误自动重试（对齐 `util/retry.ts`）**
+- 默认 **attempts = 3**、初始 **delay = 500ms**、**factor = 2**（指数退避）、**maxDelay = 10000ms**；均可配置。
+- **仅对瞬时错误重试**，判定依据错误消息（不区分大小写）包含以下之一：
+  `load failed`、`network connection was lost`、`network request failed`、`failed to fetch`、`econnreset`、`econnrefused`、`etimedout`、`socket hang up`。
+- 非瞬时错误（如密钥无效、4xx 参数错误）**不重试**，直接抛出。
+
+**b) 流式读取超时中止（对齐 `aisdk.ts`）**
+- 对模型 SSE 流做 **chunk/read 超时**：单个数据块在超时时间内未到达即 `abort` 并取消读取（防止「假死」挂起），随后由 (a) 的重试逻辑决定是否重试。
+- 支持整体请求 **timeout**（`AbortSignal.timeout`）与自定义 `fetch`，与 OpenCode 一致。
+
+**c) AI SDK 自身重试**
+- 复用底层 provider SDK 的 `maxRetries` 机制（与 OpenCode 一致），与 (a) 分层协作。
+
+**d) provider 错误的处理（对齐 `session/runner/llm.ts`）**
+- 流中出现 `providerError` 事件时按事件流处理；上下文溢出（context overflow）触发**自动压缩后重试**该轮（`compactAfterOverflow` → 重跑 turn）。
+- 失败最终不可恢复时，标记 `failAssistant` 并结束该轮，前台显示错误，未结算的工具调用置为失败。
+
+> 说明：OpenCode 对**进行中的单次流式响应不做「断点续接」**，而是「中止 + 按瞬时错误整轮重试」；本产品与之一致（不虚构断点续传）。前台 AI 面板在重试期间显示「重连中…」，并提供手动「重试」。
 
 ---
 
