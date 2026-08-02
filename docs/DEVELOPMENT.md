@@ -189,6 +189,13 @@ opencode-ide/
 - 工作区：文件与状态存云端，四端打开同一 workspace 看到相同内容。
 - 实时：WebSocket 广播文件变更、光标、Agent 会话进度，跨端秒级同步（见 §12）。
 
+### 5.4 TUI 终端客户端（第五端）
+除四个图形端外，提供 **TUI 命令行客户端**（对齐 OpenCode 的 `opencode` 命令）：
+- **用途**：在 SSH 服务器、Docker 容器、无桌面环境中直接在终端使用 AI 编码 Agent；键盘为主、极轻量、启动快。
+- **实现**：Rust（如 `ratatui` + `crossterm`），复用同一套 **SDK/Protocol + Server**，行为与图形端一致。
+- **能力**：会话对话、工具调用、技能/命令、Agent 切换（build/plan/@subagent）、diff 预览与应用、权限确认。
+- **发行**：单文件二进制，`opencode` 命令，支持包管理器安装（对齐 OpenCode 安装体验）。
+
 ---
 
 ## 6. 前台编辑器（对齐 VSCode）
@@ -509,7 +516,7 @@ PUT    /admin/settings/opencode-ide
 | M2 | AI 与后台 | Agent 会话、工具调用、管理后台基础、i18n（zh/en） | 4~6 周 |
 | M3 | 技能/插件/工作流 | 市场、安装机制、工作流编排、终端 | 6~8 周 |
 | M4 | 桌面端 | Tauri 桌面打包与本地能力 | 3~4 周 |
-| M5 | 移动端 | 安卓 + 苹果（Tauri Mobile）、触屏适配 | 6~8 周 |
+| M5 | 移动端 + TUI | 安卓 + 苹果（Tauri Mobile）、触屏适配；TUI 终端客户端（ratatui） | 6~8 周 |
 | M6 | 协作与硬化 | CRDT 实时协作、安全/性能/可观测、计费 | 6~8 周 |
 
 > 以上为单团队顺序估算，实际可并行压缩。
@@ -605,7 +612,7 @@ PUT    /admin/settings/opencode-ide
 | 功能 | 状态 | 说明 |
 |---|---|---|
 | 无头 Server + SDK/Protocol | ✅ | §7.9 |
-| TUI 客户端 | ⚠️ | 文档聚焦 GUI；如需完全对齐应补 TUI 端 |
+| TUI 客户端（终端命令行版） | ✅ | 已纳入范围（见 §5.4）；Rust 实现（如 ratatui），复用 SDK/Server |
 | 桌面客户端 | ✅ | Tauri（OpenCode 用 Electron） |
 | **IDE 集成 / ACP**（`opencode/src/acp`、`ide`：嵌入 VSCode/Zed，Agent Client Protocol） | ❌→已补 | 需支持作为外部 IDE 的 Agent 后端 |
 | GitHub 集成（issue/PR/triage） | ✅ | §7.8 |
@@ -617,7 +624,7 @@ PUT    /admin/settings/opencode-ide
 ### 18.2 OpenCode 覆盖结论
 - **已覆盖核心**：Agent（build/plan/subagent）、权限、命令、技能、插件、自定义工具、主题、MCP、references、配置格式、多 provider、自动重连、Slack/GitHub、Server/SDK。
 - **文档原缺失、现补齐（§18.3）**：会话压缩、快照/回滚、会话分享、todo 工具、websearch、attachments、formatter、file watcher、OAuth 类 provider、IDE/ACP 集成、background jobs、apply-patch 语义。
-- **需优化**：provider 全清单、TUI 端是否做、git/worktree 本地能力、models.dev 目录、企业 control-plane 细节、会话成本/tokens 统计。
+- **需优化**：provider 全清单、git/worktree 本地能力、models.dev 目录、企业 control-plane 细节、会话成本/tokens 统计。（TUI 端已确认纳入，见 §5.4）
 
 ### 18.3 补充功能项（纳入范围）
 以下已并入功能范围，将在后续详设：
