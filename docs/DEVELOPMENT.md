@@ -537,6 +537,163 @@ PUT    /admin/settings/opencode-ide
 
 ---
 
+## 18. 对照核对：OpenCode 功能覆盖 & VSCode 界面一致性
+
+> 依据 anomalyco/opencode 源码（`packages/core/src`、`packages/opencode/src`、`.opencode/`）逐项核对。图例：✅已在文档覆盖　⚠️需优化/补细节　❌文档缺失（需补）。
+
+### 18.1 OpenCode 功能全量对照
+
+**A. Agent / 会话**
+| OpenCode 功能 | 状态 | 说明 |
+|---|---|---|
+| 内置 Agent：build / plan | ✅ | §7.1 |
+| 子 Agent：general + 自定义 subagent（@ 调用） | ✅ | §7.1 |
+| 自定义 Agent（`config/agent.ts`、`.opencode/agent/*.md`） | ✅ | §7.1/§7.6 |
+| 权限系统 permission（allow/ask/deny） | ✅ | §7.1/§13 |
+| 会话压缩 compaction（自动摘要、上下文溢出恢复） | ❌→已补 | 见 §18.3 补充项 |
+| 会话快照 / 回滚（snapshot + revert，检查点撤销） | ❌→已补 | OpenCode 有 `snapshot.ts`/`session/revert.ts` |
+| 会话分享 share（生成只读分享链接） | ❌→已补 | OpenCode 有 `share/` |
+| todo / 任务清单工具（todowrite） | ❌→已补 | 内置工具，AI 维护任务列表 |
+| 会话标题自动生成、成本/tokens 统计 | ⚠️ | 需在会话模型补字段 |
+
+**B. 内置工具（tools）**
+| 工具 | 状态 | 说明 |
+|---|---|---|
+| bash（执行命令） | ✅ | §7.7 |
+| read / write / edit / apply-patch（读写/补丁式改文件） | ⚠️ | §7.1 提到读写，需明确 apply-patch/diff 语义 |
+| glob / grep（文件与内容检索） | ✅ | §7.1 |
+| read-filesystem（目录浏览） | ✅ | §7.1 |
+| webfetch（抓取网页） | ⚠️ | §7.1 提到 URL，需列为独立工具 |
+| **websearch（联网搜索）** | ❌→已补 | 独立工具，需支持搜索 provider |
+| question（向用户提问/确认） | ⚠️ | 与权限交互相关，需明确 |
+| skill（调用技能） | ✅ | §7.3 |
+| 工具启用/禁用（`tools:{}`） | ✅ | §7.6 |
+
+**C. 扩展与配置**
+| 功能 | 状态 | 说明 |
+|---|---|---|
+| Skills（SKILL.md） | ✅ | §7.3 |
+| Plugins（`@opencode-ai/plugin`，事件钩子/工具/命令） | ✅ | §7.4 |
+| 自定义命令 command（`.opencode/command/*.md`） | ✅ | §7.2 |
+| 自定义工具 tool（`.opencode/tool/*.ts`） | ✅ | §7.4 |
+| 主题 themes（JSON） | ✅ | §7.5 |
+| **MCP 服务器**（`config/mcp.ts`，本地/远程） | ✅ | §7.6 |
+| references（外部资料引用） | ✅ | §7.1/§7.6 |
+| instruction context（AGENTS.md 规则） | ✅ | §7.1 |
+| `opencode.json` 分层配置 | ✅ | §7.6 |
+| attachments（图片/文件附件入会话） | ❌→已补 | `config/attachments.ts`、`image/` |
+| experimental 配置 | ⚠️ | 可选，低优先 |
+
+**D. 代码智能与编辑器侧**
+| 功能 | 状态 | 说明 |
+|---|---|---|
+| **LSP 集成**（`config/lsp.ts`、`opencode/src/lsp`：诊断/hover 供 Agent） | ⚠️ | §6.4 有 LSP，但需明确 Agent 也用 LSP 诊断 |
+| **formatter 自动格式化**（`config/formatter.ts`，保存/编辑后格式化） | ❌→已补 | 需支持 prettier/gofmt 等 |
+| **file watcher 文件监听**（`config/watcher.ts`） | ❌→已补 | 外部改动实时刷新 |
+| git 集成（diff/blame/worktree） | ⚠️ | §7.8 提 GitHub，需补本地 git 能力与 worktree |
+
+**E. Provider / 模型**
+| 功能 | 状态 | 说明 |
+|---|---|---|
+| ~30+ provider（openai/anthropic/google/bedrock/azure/groq/mistral/xai/openrouter/vercel/cohere/perplexity/deepinfra/cerebras/together/nvidia/gitlab/opencode 等） | ⚠️ | §7.1 列了部分，需补全清单 |
+| OpenAI 兼容 / 本地模型 | ✅ | §7.1 |
+| **OAuth 登录类 provider**（如 GitHub Copilot、需 `oauth/credential`） | ❌→已补 | 需 OAuth 授权流与凭据存储 |
+| 模型目录（models.dev 动态目录） | ⚠️ | 建议接入 models.dev |
+| 自动重连/重试 | ✅ | §7.10（已对齐源码） |
+
+**F. 客户端与集成**
+| 功能 | 状态 | 说明 |
+|---|---|---|
+| 无头 Server + SDK/Protocol | ✅ | §7.9 |
+| TUI 客户端 | ⚠️ | 文档聚焦 GUI；如需完全对齐应补 TUI 端 |
+| 桌面客户端 | ✅ | Tauri（OpenCode 用 Electron） |
+| **IDE 集成 / ACP**（`opencode/src/acp`、`ide`：嵌入 VSCode/Zed，Agent Client Protocol） | ❌→已补 | 需支持作为外部 IDE 的 Agent 后端 |
+| GitHub 集成（issue/PR/triage） | ✅ | §7.8 |
+| Slack 集成 | ✅ | §7.8 |
+| 企业版 / control-plane（`control-plane`、`enterprise`） | ⚠️ | §7.8 提及，需补集中管控细节 |
+| background jobs（后台任务） | ❌→已补 | 长任务异步执行 |
+| sync（多端/多设备同步） | ✅ | §12（需对齐 OpenCode sync 语义） |
+
+### 18.2 OpenCode 覆盖结论
+- **已覆盖核心**：Agent（build/plan/subagent）、权限、命令、技能、插件、自定义工具、主题、MCP、references、配置格式、多 provider、自动重连、Slack/GitHub、Server/SDK。
+- **文档原缺失、现补齐（§18.3）**：会话压缩、快照/回滚、会话分享、todo 工具、websearch、attachments、formatter、file watcher、OAuth 类 provider、IDE/ACP 集成、background jobs、apply-patch 语义。
+- **需优化**：provider 全清单、TUI 端是否做、git/worktree 本地能力、models.dev 目录、企业 control-plane 细节、会话成本/tokens 统计。
+
+### 18.3 补充功能项（纳入范围）
+以下已并入功能范围，将在后续详设：
+1. **会话压缩 compaction**：超长上下文自动摘要；上下文溢出时压缩后重跑该轮（已见 §7.10）。
+2. **快照与回滚**：每步操作可创建快照，支持一键回滚到任意检查点（对齐 `snapshot`/`revert`）。
+3. **会话分享**：生成只读分享链接，可回放会话（对齐 `share`）。
+4. **todo 任务工具**：Agent 维护任务清单，前台 AI 面板可视化。
+5. **websearch / webfetch**：联网搜索 + 网页抓取工具。
+6. **attachments**：图片/文件作为多模态输入进入会话。
+7. **formatter**：保存/编辑后按语言自动格式化（prettier/gofmt/rustfmt 等）。
+8. **file watcher**：监听工作区外部改动并实时刷新。
+9. **OAuth 类 provider 与凭据管理**：支持 GitHub Copilot 等需 OAuth 的模型来源，凭据加密存储。
+10. **IDE 集成 / ACP**：作为 Agent 后端接入外部 VSCode/Zed（Agent Client Protocol）。
+11. **background jobs**：长耗时任务异步执行与状态跟踪。
+12. **apply-patch/diff 编辑语义**：以补丁方式改文件，前台以 diff 呈现并确认应用。
+13. **git 本地能力 + worktree**：本地 diff/blame/分支/worktree。
+
+### 18.4 VSCode 界面一致性对照
+
+**已在文档覆盖（§6）**
+| 项 | 状态 |
+|---|---|
+| 整体布局：活动栏/侧边栏/编辑区/面板/状态栏 | ✅ |
+| 主题配色：Dark+/Light+/High Contrast token | ✅ |
+| Monaco 编辑器：实时高亮、行号、minimap、折叠、括号匹配 | ✅ |
+| TextMate 语法（与 VSCode 一致的高亮） | ✅ |
+| 语义高亮（LSP Semantic Tokens） | ✅ |
+| 右键上下文菜单（转到定义/引用/重命名/格式化…） | ✅ |
+| 命令面板、快捷键与 VSCode 默认一致 | ✅ |
+| 多标签、分屏、拖拽、面包屑、搜索替换（正则） | ✅ |
+| 文件图标主题（Seti） | ✅ |
+| 浏览器打开本地文件夹 | ✅ |
+| AI 独立右侧栏（不侵占编辑区） | ✅ |
+
+**VSCode 常见能力：文档原缺失、现补齐（⚠️/❌→已补）**
+| VSCode 能力 | 状态 | 说明 |
+|---|---|---|
+| **快速打开 Quick Open（Ctrl+P）** | ❌→已补 | 文件模糊跳转 |
+| **全局搜索面板（跨文件搜索/替换、正则、include/exclude）** | ⚠️ | §6.3 提搜索，需补独立搜索视图 |
+| **源代码管理（SCM）视图**：Git 变更、暂存、提交、diff、blame | ❌→已补 | 侧边栏 Source Control |
+| **调试（Debug）** | ⚠️ | §6.3 仅占位，需明确是否接 DAP（Debug Adapter Protocol） |
+| **测试资源管理器（Testing）** | ❌→已补 | 运行/查看测试 |
+| **问题面板 Problems**（LSP 诊断汇总） | ⚠️ | 提及占位，需接 LSP 诊断 |
+| **输出/调试控制台面板** | ⚠️ | 占位，需实现 |
+| **集成终端**（多终端、拆分） | ✅ | §7.7 |
+| **设置 UI + settings.json**（图形化设置 + JSON） | ❌→已补 | 需做设置界面与 JSON 双通道 |
+| **键盘快捷方式编辑器 Keybindings** | ❌→已补 | 可视化改键位 |
+| **代码片段 Snippets** | ❌→已补 | 用户自定义片段 |
+| **IntelliSense/补全/参数提示/hover** | ✅ | §6.4（LSP） |
+| **重构/快速修复 Code Actions/灯泡** | ⚠️ | LSP 支持，需在 UI 暴露 |
+| **差异编辑器 Diff Editor** | ⚠️ | Monaco 支持，AI/Git 均用，需明确 |
+| **多根工作区 Multi-root** | ❌→已补 | 一窗口多文件夹 |
+| **Zen 模式 / 面板显隐 / 布局自定义** | ⚠️ | 布局细节 |
+| **扩展视图 Extensions（安装/管理）** | ✅ | §7.4（插件，Open VSX 子集） |
+| **Emmet、自动保存、格式化-保存时** | ⚠️/❌→已补 | formatter 见 §18.3 |
+| **面包屑、Sticky Scroll、括号对着色** | ⚠️ | Monaco 可配，需开启 |
+| **notebook（.ipynb）支持** | ❌ | 建议后期，非首期 |
+| **远程开发（Remote/SSH/容器）** | ⚠️ | 本产品云端 Workspace Pod 天然覆盖多数场景 |
+
+### 18.5 VSCode 一致性结论
+- **视觉/编辑核心已一致**：布局、配色、高亮、右键、命令面板、快捷键、Monaco 能力。
+- **文档原缺失、现补齐（纳入范围）**：Quick Open、SCM/Git 视图、Testing、设置 UI+settings.json、Keybindings 编辑器、Snippets、多根工作区、独立全局搜索视图。
+- **需优化/明确**：调试（是否接 DAP）、Problems/Output 面板接 LSP、Diff 编辑器、Code Actions 在 UI 暴露、Sticky Scroll/括号着色等细节开关。
+- **建议延后**：Notebook、完整远程开发（云端 Pod 已覆盖大部分）。
+
+### 18.6 补充里程碑（承接 §18.3 / §18.5 的新增项）
+| 阶段 | 新增交付 |
+|---|---|
+| M2+ | LSP 诊断→Problems 面板、formatter、file watcher、Quick Open、settings.json |
+| M3+ | 快照/回滚、会话分享、todo 工具、websearch/webfetch、attachments、SCM/Git 视图、设置 UI |
+| M3+ | apply-patch/diff、OAuth 类 provider、MCP 完整、provider 全清单 |
+| M4+ | Testing 面板、Keybindings 编辑器、Snippets、多根工作区、Diff 编辑器完善 |
+| M5+ | IDE/ACP 集成、background jobs、企业 control-plane、（可选）调试 DAP |
+
+---
+
 ## 附：技术选型速览
 
 - 后端：Rust + axum + tokio + SQLx/SeaORM + tonic + Redis + PostgreSQL + 对象存储 + pgvector/Qdrant
