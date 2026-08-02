@@ -193,10 +193,20 @@ opencode-ide/
 
 ## 6. 前台编辑器（对齐 VSCode）
 
+> **界面基准**：前台排版、布局、配色、右键菜单、快捷键均以官方 [microsoft/vscode](https://github.com/microsoft/vscode) 为准逐项复刻。
+
 ### 6.1 视觉与排版一致性
 - 使用 **Monaco Editor**（VSCode 的编辑器内核），天然保证：代码实时渲染、缩进参考线、行号、minimap、括号匹配、折叠。
 - 采用 VSCode 官方 **Dark+ / Light+ / High Contrast** 主题 token；布局栅格（活动栏 Activity Bar、侧边栏 Side Bar、编辑区、面板 Panel、状态栏 Status Bar）像素级复刻。
 - 图标使用 VSCode Seti/官方文件图标主题。
+
+### 6.1.1 浏览器打开本地文件夹（重点）
+- Web 端支持**直接打开本地文件夹**并实时读写，无需上传到云端：
+  - 基于 **File System Access API**（`showDirectoryPicker` / `FileSystemDirectoryHandle`），获取目录句柄后在浏览器内构建文件树、打开/保存文件、监听变更。
+  - 句柄可持久化（IndexedDB），下次打开一键恢复授权目录；写入前请求持久化写权限。
+  - 兼容性降级：不支持该 API 的浏览器回退到「拖拽文件夹 / 多选文件」+ 云端工作区模式。
+  - 桌面/移动端（Tauri）走原生文件系统，能力更完整（本地终端、任意路径）。
+- 与云端工作区并存：用户可在「本地文件夹」与「云端 Workspace」间切换，同一套编辑器 UI。
 
 ### 6.2 自动识别语言与高亮
 - 依据文件扩展名 + shebang + 内容启发式自动识别语言。
