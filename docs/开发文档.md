@@ -217,32 +217,79 @@ opencode-ide/
 
 ## 7. 核心功能（对齐 OpenCode）
 
-> 目标：Agent、工具（tools）、工作流、技能、插件的能力与 OpenCode 一致。
+> **功能基准**：以官方仓库 [anomalyco/opencode](https://github.com/anomalyco/opencode) 为准逐项对齐。
+> OpenCode 本身是 **TypeScript/Bun monorepo**，采用「**无头服务端（server）+ 多客户端（TUI / 桌面 / Web）**」架构，通过 SDK/Protocol 通信。本产品在功能与配置格式上对齐它，并在其基础上补齐 VSCode 式图形编辑器与统一管理后台。
 
-### 7.1 AI Agent
-- 会话式编码助手：读代码、写代码、运行命令、修 bug、跑测试。
-- 多模型支持：可配置 OpenAI/Anthropic/本地模型等 provider（密钥在管理后台配置）。
-- 工具调用（tool use）：读写文件、执行终端、搜索代码、运行测试、打开 URL 等，与 OpenCode 工具体系对齐。
-- 上下文管理：仓库索引 + 向量检索（RAG）提供相关代码上下文。
+### 7.0 OpenCode 真实架构参考（用于对齐）
+OpenCode 关键包（`packages/`）：
+- `core`：Agent 内核，基于 **Vercel AI SDK** 接入大量 provider（openai / anthropic / google / bedrock / azure / groq / mistral / perplexity / alibaba / openai-compatible 等）。
+- `server`：无头服务端（drizzle-orm + effect）。
+- `sdk` / `protocol` / `schema`：客户端 SDK 与协议/数据结构定义。
+- `tui`：终端 UI（@opentui/solid）。
+- `desktop`：桌面客户端（官方用 Electron）。
+- `app` / `web` / `session-ui` / `ui`：图形界面（SolidJS，代码高亮用 **Shiki/TextMate**）。
+- `plugin`：插件系统（zod 定义）。
+- 集成：`slack`、`github`、`enterprise`、`containers`。
 
-### 7.2 自动工作流（Workflow）
-- 可编排的多步骤流程：如「读取需求 → 生成代码 → 运行测试 → 修复 → 提交 PR」。
-- 触发方式：手动、定时、事件（如 push/issue）。
-- 可视化编排界面 + YAML 定义（存版本库）。
+> 本产品的差异化取舍：**服务端与客户端改用 Rust 实现（axum 等）**，图形前台改用 **Monaco**（更贴近 VSCode），桌面/移动端改用 **Tauri**（体积更小）。功能语义、配置文件格式、技能/插件/命令/主题的组织方式与 OpenCode 对齐，力求可迁移。
 
-### 7.3 技能安装（Skills）
-- 技能 = 提示词模板 + 工具声明 + 可选脚本，打包为可安装单元。
-- 从「技能市场」浏览、搜索、一键安装/卸载/更新，支持版本与依赖。
-- 安装后在 Agent 会话中可被调用。
+### 7.1 AI Agent（对齐 build / plan / general）
+- **内置 Agent**：`build`（默认，完整读写权限）、`plan`（只读，默认禁止改文件、执行 bash 前询问，用于分析/探索）；`Tab` 键切换。
+- **子 Agent（subagent）**：内置 `general`（复杂搜索/多步任务），消息中用 `@general` 调用；支持自定义子 Agent。
+- **多模型/多 provider**：通过 AI SDK 接入各大厂商与 OpenAI 兼容/本地模型；密钥在管理后台配置。
+- **工具调用（tools）**：读写文件、执行 bash/终端、搜索代码（grep/glob）、运行测试、抓取 URL 等，与 OpenCode 工具集对齐；工具可在配置中按需启用/禁用。
+- **上下文**：仓库索引 + 语义检索（RAG）+ `references`（外部资料引用）+ `AGENTS.md` 规则文件。
+- **权限系统（permission）**：对文件编辑、bash 执行等按 Agent/操作粒度配置「允许 / 询问 / 拒绝」。
 
-### 7.4 插件安装（Plugins）
-- 插件扩展 IDE/Agent：编辑器扩展、LSP、主题、命令、Agent 工具。
-- 兼容策略：优先兼容 **Open VSX** 生态的 VSCode 扩展（受运行环境限制的做能力子集）。
-- 一键安装/启用/禁用/卸载，权限声明与沙箱执行。
+### 7.2 命令与自动工作流（Commands / Workflow）
+- **自定义命令（对齐 `.opencode/command/*.md`）**：Markdown + frontmatter（`description`、`model`、`subtask` 等）定义可复用命令（如 commit、changelog、translate、spellcheck）。
+- **自动工作流**：多步骤编排（读需求 → 改代码 → 跑测试 → 修复 → 提交 PR）；触发方式：手动 / 定时 / 事件（push、issue、Slack）。
+- **可视化编排** + 文本定义（存版本库），可复用命令与子 Agent 作为步骤。
 
-### 7.5 终端与执行
+### 7.3 技能安装（Skills，对齐 `.opencode/skills/<name>/SKILL.md`）
+- **技能格式**：文件夹内 `SKILL.md`，frontmatter 含 `name`、`description`，正文为流程说明/指令；可附脚本与引用。
+- 从「技能市场」浏览、搜索、一键安装 / 卸载 / 更新；支持项目级与用户级安装。
+- 安装后 Agent 会话可自动/按需调用；兼容 OpenCode 技能目录结构，便于迁移。
+
+### 7.4 插件安装（Plugins，对齐 `.opencode/plugins` + `@opencode-ai/plugin`）
+- **两类扩展**：
+  - **OpenCode 插件**：TS/JSON 插件（zod schema），可扩展 Agent 工具、命令、事件钩子、主题。
+  - **编辑器扩展**：为贴近 VSCode 体验，另兼容 **Open VSX** 的 VSCode 扩展子集（主题、语法、部分命令；受沙箱与 API 限制）。
+- **自定义工具（对齐 `.opencode/tool/*.ts`）**：项目内声明自定义工具供 Agent 调用。
+- 一键安装 / 启用 / 禁用 / 卸载；权限声明 + 沙箱执行 + 后台白名单。
+
+### 7.5 主题（Themes，对齐 `.opencode/themes/*.json`）
+- 支持 OpenCode 主题 JSON 与 VSCode 主题；后台可设默认主题，用户可自定义。
+
+### 7.6 配置文件兼容（对齐 `opencode.json` / `opencode.jsonc`）
+兼容 OpenCode 配置结构，字段包括：
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {},      // 模型 provider 与密钥/参数
+  "permission": {},    // 权限（编辑/bash 等：allow|ask|deny）
+  "references": {},    // 外部资料引用（repo/path + description）
+  "mcp": {},           // MCP 服务器（工具扩展）
+  "tools": {},         // 工具启用/禁用开关
+  "agent": {},         // 自定义 agent
+  "command": {},       // 自定义命令
+  "theme": ""          // 主题
+}
+```
+- **MCP 支持**：可接入 Model Context Protocol 服务器，动态扩展工具（与 OpenCode 一致）。
+- 分层配置：全局（用户）→ 组织 → 项目（`.opencode/`）逐级覆盖，管理后台可下发默认值。
+
+### 7.7 终端与执行
 - 集成终端连接 Workspace Pod（PTY over WebSocket）。
 - 代码运行/调试在沙箱内进行，资源与网络受限。
+
+### 7.8 集成（对齐 Slack / GitHub / 企业版）
+- **GitHub**：issue/PR 触发、自动改代码提 PR、PR 搜索/三连（triage）等（对齐 `.opencode/tool/github-pr-search.ts` 与 `github` 包）。
+- **Slack**：在 Slack 中发起/接收 Agent 任务与结果。
+- **企业/自托管**：对齐 `enterprise` 能力，支持私有化部署与团队治理。
+
+### 7.9 客户端接口对齐（SDK / Server）
+- 提供无头 **Server** + **SDK/Protocol**，第三方可像 OpenCode 一样以 SDK 驱动 Agent；本产品的 Web/桌面/移动/TUI 均为该 Server 的客户端，保证四端行为一致。
 
 ---
 
