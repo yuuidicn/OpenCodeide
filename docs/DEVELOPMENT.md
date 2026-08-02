@@ -249,7 +249,7 @@ opencode-ide/
 - **右键上下文菜单**：复刻 VSCode 菜单项（转到定义、查找所有引用、重命名符号、格式化文档、剪切/复制/粘贴、命令面板等）。
 - **命令面板**（Ctrl/Cmd+Shift+P）、快捷键绑定与 VSCode 默认一致。
 - **多标签、分屏、拖拽、面包屑导航、搜索替换（含正则）**。
-- **集成终端**面板、问题面板、输出面板、调试面板占位。
+- **集成终端**面板、问题面板（Problems）、输出面板；**运行/任务**面板（不做断点调试/DAP）。
 
 ### 6.4 语言智能（LSP）
 - 后端在 Workspace Pod 内启动对应语言的 Language Server（rust-analyzer、tsserver、pyright、gopls 等）。
@@ -665,7 +665,7 @@ PUT    /admin/settings/opencode-ide
 | **快速打开 Quick Open（Ctrl+P）** | ❌→已补 | 文件模糊跳转 |
 | **全局搜索面板（跨文件搜索/替换、正则、include/exclude）** | ⚠️ | §6.3 提搜索，需补独立搜索视图 |
 | **源代码管理（SCM）视图**：Git 变更、暂存、提交、diff、blame | ❌→已补 | 侧边栏 Source Control |
-| **调试（Debug）** | ⚠️ | §6.3 仅占位，需明确是否接 DAP（Debug Adapter Protocol） |
+| **调试（Debug）** | ❌ 不做 | 已确认：只做「运行/终端」，不接 DAP、不做断点调试 |
 | **测试资源管理器（Testing）** | ❌→已补 | 运行/查看测试 |
 | **问题面板 Problems**（LSP 诊断汇总） | ⚠️ | 提及占位，需接 LSP 诊断 |
 | **输出/调试控制台面板** | ⚠️ | 占位，需实现 |
@@ -687,7 +687,8 @@ PUT    /admin/settings/opencode-ide
 ### 18.5 VSCode 一致性结论
 - **视觉/编辑核心已一致**：布局、配色、高亮、右键、命令面板、快捷键、Monaco 能力。
 - **文档原缺失、现补齐（纳入范围）**：Quick Open、SCM/Git 视图、Testing、设置 UI+settings.json、Keybindings 编辑器、Snippets、多根工作区、独立全局搜索视图。
-- **需优化/明确**：调试（是否接 DAP）、Problems/Output 面板接 LSP、Diff 编辑器、Code Actions 在 UI 暴露、Sticky Scroll/括号着色等细节开关。
+- **需优化/明确**：Problems/Output 面板接 LSP、Diff 编辑器、Code Actions 在 UI 暴露、Sticky Scroll/括号着色等细节开关。
+- **不做**：断点调试（已确认只做运行/终端，不接 DAP）。
 - **建议延后**：Notebook、完整远程开发（云端 Pod 已覆盖大部分）。
 
 ### 18.6 补充里程碑（承接 §18.3 / §18.5 的新增项）
@@ -697,7 +698,7 @@ PUT    /admin/settings/opencode-ide
 | M3+ | 快照/回滚、会话分享、todo 工具、websearch/webfetch、attachments、SCM/Git 视图、设置 UI |
 | M3+ | apply-patch/diff、OAuth 类 provider、MCP 完整、provider 全清单 |
 | M4+ | Testing 面板、Keybindings 编辑器、Snippets、多根工作区、Diff 编辑器完善 |
-| M5+ | IDE/ACP 集成、background jobs、企业 control-plane、（可选）调试 DAP |
+| M5+ | IDE/ACP 集成、background jobs、企业 control-plane |
 
 ---
 
